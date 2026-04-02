@@ -5,8 +5,12 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 0 * * *" # every day
+    - cron: "0 0 * * *" # 每天零点执行
   workflow_dispatch:
+
+# 核心修改：添加此环境变量，让所有步骤强制运行在 Node.js 24 环境下
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   sync_latest_from_upstream:
@@ -15,23 +19,24 @@ jobs:
     if: ${{ github.event.repository.fork }}
 
     steps:
-      # Step 1: run a standard checkout action
+      # 第一步：检出代码。
+      # 虽然 v4 报警告，但配合上面的 env 变量，它可以在 Node 24 下继续工作。
       - name: Checkout target repo
         uses: actions/checkout@v4
 
-      # Step 2: run the sync action
+      # 第二步：同步上游仓库。
+      # 建议使用 v3.4.1，这是作者针对环境适配进行的稳定版本。
       - name: Sync upstream changes
         id: sync
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
         with:
           upstream_sync_repo: tangly1024/NotionNext
           upstream_sync_branch: main
           target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # automatically generated, no need to set
-
-          # Set test_mode true to run tests instead of the true action!!
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
           test_mode: false
 
+      # 第三步：同步失败时的提示。
       - name: Sync check
         if: failure()
         run: |
